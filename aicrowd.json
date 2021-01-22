@@ -1,0 +1,9 @@
+{
+    "challenge_id": "evaluations-api-drderk",
+    "grader_id": "evaluations-api-drderk",
+    "authors": ["yoogottamk"],
+    "description": "test submission",
+    "license": "MIT",
+    "debug": false,
+    "gpu": false
+}
