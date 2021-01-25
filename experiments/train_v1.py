@@ -12,7 +12,7 @@ SEED = 137
 np.random.seed(SEED)
 
 NPZ_FILENAME = "weights/model_v1.npz"
-REWARD_FUNCTION = reward_function={
+REWARD_FUNCTION = {
     "damageEnemyStatue": 4,
     "damageEnemyUnit": 2,
     "killEnemyStatue": 4,
