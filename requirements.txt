@@ -1,1 +1,2 @@
 gym-derk==0.16.0
+numpy
