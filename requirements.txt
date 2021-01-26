@@ -1,2 +1,3 @@
 gym-derk==0.16.0
 numpy
+python-telegram-bot
