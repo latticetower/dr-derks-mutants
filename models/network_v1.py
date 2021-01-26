@@ -1,5 +1,6 @@
 import math
 import numpy as np
+from gym_derk import ObservationKeys
 
 
 class Network:
