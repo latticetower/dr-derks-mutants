@@ -2,10 +2,10 @@
 Run a derk game between bots
 """
 
-from argparse import ArgumentParser
-import importlib
-
 import asyncio
+import importlib
+from argparse import ArgumentParser
+
 from gym_derk import DerkSession, DerkAgentServer, DerkAppInstance
 
 
@@ -13,7 +13,9 @@ async def run_player(env: DerkSession, DerkPlayerClass):
     """
     Runs a DerkPlayer
     """
+
     player = DerkPlayerClass(env.n_agents, env.action_space)
+
     obs = await env.reset()
     player.signal_env_reset(obs)
     ordi = await env.step()
@@ -27,6 +29,7 @@ async def main(p1, p2, n, turbo):
     """
     Runs the game in n arenas between p1 and p2
     """
+
     agent_p1 = DerkAgentServer(run_player, args={"DerkPlayerClass": p1}, port=8788)
     agent_p2 = DerkAgentServer(run_player, args={"DerkPlayerClass": p2}, port=8789)
 
@@ -71,8 +74,9 @@ async def main(p1, p2, n, turbo):
     await app.print_team_stats()
 
 
-if __name__ == "__main__":
+def parse_arguments():
     p = ArgumentParser()
+
     p.add_argument(
         "-p1",
         help="Path to player1 module relative to agent. Defaults to `bot`",
@@ -97,7 +101,12 @@ if __name__ == "__main__":
         action="store_true",
     )
 
-    args = p.parse_args()
+    return p.parse_args()
+
+
+if __name__ == "__main__":
+    args = parse_arguments()
+
     player1 = importlib.import_module(f"agent.{args.p1}").DerkPlayer
     player2 = importlib.import_module(f"agent.{args.p2}").DerkPlayer
 

@@ -41,10 +41,11 @@ class DerkPlayer:
                         4 = focus enemy statue
                     5 - 7 = focus enemy
         """
+
         _obs_n, _rew_n, _done_n, _info_n = env_step_ret
 
         # null action
-        _null_action = np.zeros((self.n_agents, 5))
+        # _null_action = np.zeros((self.n_agents, 5))
 
         # random action
         _random_action = [self.action_space.sample() for i in range(self.n_agents)]

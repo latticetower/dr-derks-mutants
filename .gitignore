@@ -1,2 +1,7 @@
 chromedata
 __pycache__
+venv__
+venv_
+venv
+.idea
+_init_environment.py
