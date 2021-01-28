@@ -38,9 +38,13 @@ class TelegramPost(object):
     def set_tags(self, tags):
         self.tags = tags
 
-    def send(self, bot, channel):
-        text = "\n".join([str(x) for x in self.text])
-        
+    def send(self, bot, channel, experiment_tags=None):
+        if bot is None:
+            return
+        text = [str(x) for x in self.text]
+        if experiment_tags is not None and isinstance(experiment_tags, str):
+            text.append(experiment_tags)
+        text = "\n".join(text)
         if self.media is None:
             bot.send_message(channel, text)
         else:
@@ -56,10 +60,11 @@ class TelegramPost(object):
 
 
 class PostWrapper(object):
-    def __init__(self, bot, channel):
+    def __init__(self, bot, channel, tags=None):
         self.post = None
         self.bot = bot
         self.channel = channel
+        self.tags = None
 
     def __enter__(self):
         self.post = TelegramPost()
@@ -68,17 +73,21 @@ class PostWrapper(object):
     def __exit__(self, exc_type, exc_value, traceback):
         if exc_type is not None:
             return
-        self.post.send(self.bot, self.channel)
+        self.post.send(self.bot, self.channel, experiment_tags=self.tags)
 
 
 class TelegramWriter(object):
-    def __init__(self, token, channel):
+    def __init__(self, token=None, channel=None, tags=None):
         self.token = token
         self.channel = channel
-        self.bot = telegram.Bot(token=token)
+        self.tags = tags
+        if token is not None:
+            self.bot = telegram.Bot(token=token)
+        else:
+            self.bot = None
 
     def post(self):
-        return PostWrapper(self.bot, self.channel)
+        return PostWrapper(self.bot, self.channel, self.tags)
 
 
 if __name__=="__main__":
@@ -90,5 +99,5 @@ if __name__=="__main__":
         print(f)
         f.add_text("Parameters:")
         f.add_param("smth", 0.4)
-        f.add_media("example.png")
+        f.add_media("protein.gif")
         f.add_text("#hashtag")

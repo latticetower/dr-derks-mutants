@@ -1,6 +1,7 @@
 import collections
 import random
 import torch
+import numpy as np
 
 
 class ReplayBuffer(object):
@@ -16,16 +17,20 @@ class ReplayBuffer(object):
         
         for transition in mini_batch:
             s, a, r, s_prime, done_mask = transition
+            size = s.shape[0]
             s_lst.append(s)
-            a_lst.append([a])
-            r_lst.append([r])
+            a_lst.append(a)
+            r_lst.append(r)
             s_prime_lst.append(s_prime)
-            done_mask_lst.append([done_mask])
-        print(n, torch.cat(s_lst).shape)
+            done_mask_lst.append([done_mask]*size)
+        s_lst = torch.cat(s_lst).float()
+        a_lst = np.concatenate(a_lst, axis=0)
+        r_lst = np.concatenate(r_lst, axis=0)
+        s_prime_lst = torch.from_numpy(
+            np.concatenate(s_prime_lst, axis=0)).float()
+        done_mask_lst = np.concatenate(done_mask_lst, axis=0)
 
-        return torch.tensor(s_lst, dtype=torch.float), torch.tensor(a_lst), \
-               torch.tensor(r_lst), torch.tensor(s_prime_lst, dtype=torch.float), \
-               torch.tensor(done_mask_lst)
+        return s_lst, a_lst, r_lst, s_prime_lst, done_mask_lst
     
     def size(self):
         return len(self.buffer)

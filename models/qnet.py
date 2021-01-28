@@ -2,46 +2,98 @@ import random
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+import numpy as np
 
 
 class Qnet(nn.Module):
-    def __init__(self, nobservations=64, output_size=13, emb_size=4):
+    def __init__(self, n_observations=64, n_actions=13, emb_size=4):
         super(Qnet, self).__init__()
-        self.fc1 = nn.Linear(nobservations, 128)
-        self.fc2 = nn.Linear(128, 128)
-        self.fc3 = nn.Linear(128, output_size)
+        self.n_observations = n_observations
+        self.n_actions = n_actions
+        self.net = self.create_mlp(n_observations + n_actions, [128, 128], 1)
 
-    def forward(self, x):
-        print(x.shape)
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = self.fc3(x)
-        move = torch.tanh(x[0:1])  # MoveX
-        rotate = torch.tanh(x[1:2])  # Rotate
-        chase_focus = torch.sigmoid(x[2:3]) # # ChaseFocus
-        casts = torch.sigmoid(x[3:6])
-        focuses = torch.sigmoid(x[6:13])
+    def forward(self, observations, actions):
+        # print(x.shape)
+        # x: (?, 64)
+        # actions: (?, k, 13), 1 for each row
+        # collected = torch.einsum('bk,bij->bjki', observations, actions)  # ?, 13, 64, k
+        assert len(observations.shape) == 2
+        b, k, d = actions.shape
+        observations = observations.unsqueeze(1).expand(b, k, -1)
+        collected = torch.cat([observations, actions], dim=-1)
+        #collected = torch.einsum("bi,bkj->bkij", observations, actions)
+        #assert len(collected.shape) == 4
+        b, k, oa = collected.shape
+        collected = collected.reshape(b*k, -1)
+        rewards = self.net(collected) # after: (?, 1) - policies
+        # move = torch.tanh(x.index_select(-1, torch.tensor([0])))  # MoveX
+        # rotate = torch.tanh(x.index_select(-1, torch.tensor([1])))  # Rotate
+        # chase_focus = torch.sigmoid(x.index_select(-1, torch.tensor([2]))) # # ChaseFocus
+        # casts = torch.sigmoid(x.index_select(-1, torch.tensor([3, 4, 5])))
+        # focuses = torch.sigmoid(x.index_select(-1, torch.tensor([6, 7, 8, 9, 10, 11, 12])))
         # print("focuses", focuses.shape)
-        seq = [move, rotate, chase_focus, casts, focuses]
-        return torch.cat(seq, dim=0)
+        #seq = [move, rotate, chase_focus, casts, focuses]
+        #return torch.cat(seq, dim=-1)
+        return rewards.reshape(-1, k) # (?, k)
 
-    def sample_action(self, obs, epsilon):
+    @staticmethod
+    def random_actions(batch_size=6, k=1, for_env=False):
+        # deprecated!
         # obs: 6, 64
-        out = self.forward(obs)
-        print("out:", out.shape)
+        move = np.random.uniform(-1, 1, (batch_size * k, 1)) #np.ones((batch_size * k, 1))
+        rotate = np.random.uniform(-1, 1, (batch_size * k, 1))
+        chase_focus = np.random.random(((batch_size * k, 1)))
+        cast = np.random.randint(0, 3, (batch_size*k, ))
+        focus = np.random.randint(0, 7, (batch_size*k, ))
+        if for_env:
+            cast = np.expand_dims(cast, -1)
+            focus = np.expand_dims(focus, -1)
+        else:
+            chase_focus = chase_focus/2.0 - 0.5
+            cast = torch.eye(3)[cast]
+            focus = torch.eye(7)[focus]
+        result = np.concatenate([move, rotate, chase_focus, cast, focus], axis=-1)
+        return result.reshape(batch_size, k, -1)
+
+    def sample_actions(self, obs, epsilon, k=1):
+        # deprecated!
+        # obs: 6, 64
+        assert len(obs.shape) == 2
         coin = random.random()
         if coin < epsilon:
-            move = random.uniform(-1, 1)
-            rotate = random.uniform(-1, 1)
-            chase_focus = random.random()
-            cast = random.sample([0, 1, 2], 1)[0]
-            focus = random.sample([0, 1, 2, 3, 4, 5, 6, 7], 1)[0]
-            return [move, rotate, chase_focus, cast, focus]
+            size = obs.shape[0]
+            move = np.random.uniform(-1, 1, (size, 1, k))
+            rotate = np.random.uniform(-1, 1, (size, 1, k))
+            chase_focus = np.random.random(((size, 1, k)))
+            cast = np.random.randint(0, 3, (size, 1, k))
+            focus = np.random.randint(0, 7, (size, 1, k))
+            result = np.concatenate([move, rotate, chase_focus, cast, focus], axis=1)
+            # return result
         else:
-            move = out[0].detach().cpu().item()
-            rotate = out[1].detach().cpu().item()
-            chase_focus = out[2].detach().cpu().item()
-            casts = out[3:6].detach().cpu().numpy()
-            focuses = out[6:13].detach().cpu().numpy()
-            return [move, rotate, chase_focus, casts.argmax(), focuses.argmax()]
+            out = self.forward(obs)
+            out = out.detach().cpu()
+            move_rotate_cf = out.index_select(-1, torch.tensor([0, 1, 2])).numpy()
+            casts = out.index_select(
+                -1, torch.tensor([3, 4, 5])
+            ).argmax(-1, keepdim=True).numpy()
+            focuses = out.index_select(
+                -1, torch.tensor([6, 7, 8, 9, 10, 11, 12])
+            ).argmax(-1, keepdim=True).numpy()
+            # print(move_rotate_cf.shape, casts.shape, focuses.shape)
+            result = np.concatenate([
+                move_rotate_cf,
+                casts,
+                focuses
+            ], axis=-1)
+        return result
+
+    def create_mlp(self, input_size, hidden, output_size):
+        input_dim = input_size
+        layers = []
+        for h in hidden:
+            layers.append(nn.Linear(input_dim, h))
+            layers.append(nn.ReLU())
+            input_dim = h
+        layers.append(nn.Linear(input_dim, output_size))
+        return nn.Sequential(*layers)
   
