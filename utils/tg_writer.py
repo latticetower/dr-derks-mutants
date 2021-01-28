@@ -57,6 +57,10 @@ class TelegramPost(object):
                 with open(self.media, 'rb') as image:
                     bot.send_animation(
                         channel, animation=image, caption=text)
+            elif extension == ".mp4":
+                with open(self.media, 'rb') as image:
+                    bot.send_video(
+                        channel, video=image, caption=text)
 
 
 class PostWrapper(object):
