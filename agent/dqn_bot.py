@@ -2,7 +2,7 @@ import numpy as np
 from models.network_v1 import Network
 
 
-NPZ_FILENAME = "weights/model_v1.npz"
+NPZ_FILENAME = "weights/model_v2.npz"
 
 
 class DerkPlayer:
@@ -21,7 +21,9 @@ class DerkPlayer:
         with np.load(NPZ_FILENAME) as data:
             weights = np.asarray(data['weights']).copy()
             biases = np.asarray(data['biases']).copy()
-        self.network = Network(weights, biases)
+        self.networks = [
+            Network(weights, biases) for i in range(n_agents)
+        ]
 
     def signal_env_reset(self, obs):
         """
@@ -57,7 +59,7 @@ class DerkPlayer:
         # random action
         #_random_action = [self.action_space.sample() for i in range(self.n_agents)]
         action_n = [
-            self.network.forward(observation_n[i])
+            self.networks[i].forward(observation_n[i])
             for i in range(self.n_agents)
         ]
 
