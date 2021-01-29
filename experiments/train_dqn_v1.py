@@ -175,8 +175,8 @@ def record_game(env, q, savedir, n_episode, n_actions=50, use_gpu=False):
 
 
 def main(env, n_episodes=10000, start_training_at=2000, print_interval=20,
-         batch_size=32, experiment_tags=[], tg=False, n_actions=50,
-         use_gpu=False):
+         batch_size=32, experiment_tags=[], tg=False, savedir="saves",
+         n_actions=50, use_gpu=False):
     # env = gym.make('CartPole-v1') 
     q = Qnet()
     q_target = Qnet()
@@ -227,8 +227,7 @@ def main(env, n_episodes=10000, start_training_at=2000, print_interval=20,
             q_target.load_state_dict(q.state_dict())
             print("n_episode :{}, score : {}, {}, n_buffer : {}, eps : {}%".format(
                 n_epi, score, print_interval, memory.size(), epsilon))
-            savedir = "saves"
-
+            # savedir = "saves"
             image_dir = record_game(env, q, savedir, n_epi, use_gpu=use_gpu)
             save_mp4_files(
                 image_dir, tg=tg, episode=n_epi, score=score,
@@ -256,8 +255,14 @@ if __name__ == '__main__':
         "--n_actions", type=int, default=50,
         help="number of actions to sample")
     parser.add_argument(
+        "--batch_size", type=int, default=32)
+    parser.add_argument(
         "--gpu", action="store_true", default=True,
         help="Use GPU if available (default device)"
+    )
+    parser.add_argument(
+        "--tag", action="append", nargs="+", default=[],
+        help="add user tags to run"
     )
 
     args = parser.parse_args()
@@ -274,6 +279,8 @@ if __name__ == '__main__':
     commit_hash = subprocess.check_output([
         'git', 'rev-parse', '--short', 'HEAD']).decode('ascii').strip('\n')
     experiment_tags = ["dqn_v1", f"commit_{str(commit_hash)}"]
+    experiment_tags.extend(args.tag)
+
     tgwriter = TelegramWriter(token, channel)
     with tgwriter.post() as f:
         f.add_text("-"*50)
@@ -302,12 +309,13 @@ if __name__ == '__main__':
         }
     )
     main(env,
-         n_episodes=100,
-         start_training_at=10,
-         print_interval=2,
-         batch_size=4,
+         n_episodes=10000,
+         start_training_at=2000,
+         print_interval=20,
+         batch_size=args.batch_size,
          experiment_tags=experiment_tags,
          tg=(not args.notg),
+         savedir=args.savedir,
          n_actions=args.n_actions,
          use_gpu=(args.gpu and torch.cuda.is_available())
     )

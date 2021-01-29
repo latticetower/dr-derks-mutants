@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from models.qnet import Qnet
-
+from utils.common import random_actions
 
 WEIGHTS_FILE = "weights/model_dqn_v1.pth"
 
@@ -19,7 +19,9 @@ class DerkPlayer:
         """
         self.n_agents = n_agents
         self.action_space = action_space
-        self.network = torch.load(WEIGHTS_FILE).eval()
+        self.network = Qnet()
+        self.network.load_state_dict(torch.load(WEIGHTS_FILE))
+        self.network.eval()
         self.use_gpu = torch.cuda.is_available()
 
     def signal_env_reset(self, obs):
