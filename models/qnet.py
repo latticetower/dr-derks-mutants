@@ -36,25 +36,6 @@ class Qnet(nn.Module):
         #return torch.cat(seq, dim=-1)
         return rewards.reshape(-1, k) # (?, k)
 
-    @staticmethod
-    def random_actions(batch_size=6, k=1, for_env=False):
-        # deprecated!
-        # obs: 6, 64
-        move = np.random.uniform(-1, 1, (batch_size * k, 1)) #np.ones((batch_size * k, 1))
-        rotate = np.random.uniform(-1, 1, (batch_size * k, 1))
-        chase_focus = np.random.random(((batch_size * k, 1)))
-        cast = np.random.randint(0, 3, (batch_size*k, ))
-        focus = np.random.randint(0, 7, (batch_size*k, ))
-        if for_env:
-            cast = np.expand_dims(cast, -1)
-            focus = np.expand_dims(focus, -1)
-        else:
-            chase_focus = chase_focus/2.0 - 0.5
-            cast = torch.eye(3)[cast]
-            focus = torch.eye(7)[focus]
-        result = np.concatenate([move, rotate, chase_focus, cast, focus], axis=-1)
-        return result.reshape(batch_size, k, -1)
-
     def sample_actions(self, obs, epsilon, k=1):
         # deprecated!
         # obs: 6, 64

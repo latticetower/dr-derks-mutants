@@ -1,8 +1,10 @@
 import argparse
 import cv2
 import matplotlib
+import numpy as np
 import os
 from utils.tg_writer import TelegramWriter
+
 
 def save_frames_as_gif(image_paths, path='./', name='animation'):
     import matplotlib.pyplot as plt
@@ -67,7 +69,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument("--datadir", default="saves/0000000002")
     parser.add_argument("--tg", action="store_true", default=True)
+    parser.add_argument("--tag", action="append", nargs="+", default=[], type=str)
+    parser.add_argument("--episode", default=0, type=int)
+    parser.add_argument("--score", default=[], action="append", nargs="+", type=float)
+    parser.add_argument("--size", default=0, type=int)
+
     args = parser.parse_args()
+    tagline = " ".join(["#"+tag for tag in np.asarray(args.tag).flatten()])
     datadir = args.datadir
     if not os.path.exists(datadir):
         print(f"{datadir} was not found, exiting")
@@ -83,6 +91,7 @@ if __name__ == "__main__":
         print("not enough image files were found, exiting")
         exit(1)
     video_path = save_frames_as_gif(image_files, path=datadir)
+    score = list(np.asarray(args.score).flatten())
     if args.tg:
         # send to telegram
         token = os.environ.get('TELEGRAM_BOT_TOKEN', None)
@@ -90,7 +99,8 @@ if __name__ == "__main__":
         writer = TelegramWriter(token, channel)
 
         with writer.post() as f:
-            f.add_text("Parameters:")
-            f.add_param("smth", 0.4)
+            f.add_param("Episode", args.episode)
+            f.add_param("Score", score)
+            f.add_param("Memory used", args.size)
+            f.add_text(tagline)
             f.add_media(video_path)
-    
