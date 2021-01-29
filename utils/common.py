@@ -22,17 +22,20 @@ async def make_screenshot(env, path='example.png'):
 
 
 def random_actions(batch_size=6, k=1, for_env=False):
-    move = np.random.uniform(-1, 1, (batch_size * k, 1))
-    rotate = np.random.uniform(-1, 1, (batch_size * k, 1))
-    chase_focus = np.random.random(((batch_size * k, 1)))
-    cast = np.random.randint(0, 3, (batch_size*k, ))
+    move = np.random.choice([-1, -0.5, 0, 0.5, 1], (batch_size * k, 1))
+    # np.random.uniform(-1, 1, (batch_size * k, 1))
+    rotate = np.random.choice([-1, -0.5, 0, 0.5, 1], (batch_size * k, 1))
+    # np.random.uniform(-1, 1, (batch_size * k, 1))
+    chase_focus = np.random.choice([0, 0.25, 0.5, 0.75, 1], (batch_size * k, 1))
+    # np.random.random(((batch_size * k, 1)))
+    cast = np.random.randint(0, 4, (batch_size*k, ))
     focus = np.random.randint(0, 7, (batch_size*k, ))
     if for_env:
         cast = np.expand_dims(cast, -1)
         focus = np.expand_dims(focus, -1)
     else:
-        chase_focus = chase_focus/2.0 - 0.5
-        cast = torch.eye(3)[cast]
+        chase_focus = chase_focus  # /2.0 - 0.5
+        cast = torch.eye(4)[cast]
         focus = torch.eye(7)[focus]
     result = np.concatenate([move, rotate, chase_focus, cast, focus], axis=-1)
     return result.reshape(batch_size, k, -1)

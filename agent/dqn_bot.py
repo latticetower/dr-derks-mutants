@@ -26,7 +26,7 @@ class DerkPlayer:
         if self.use_gpu:
             self.network.cuda()
         self.network.eval()
-        
+
     def signal_env_reset(self, obs):
         """
         env.reset() was called
@@ -73,15 +73,15 @@ class DerkPlayer:
             for row, i in zip(torch.unbind(rand_actions, 0), best_ids.unbind(0))
         ], axis=0).detach().cpu()
         # print(best_actions.shape)
-        assert len(best_actions.shape)==2 and best_actions.shape[1] == 13
+        assert len(best_actions.shape)==2 and best_actions.shape[1] == 14
         move_rotate = best_actions.index_select(-1, torch.tensor([0, 1])).numpy()
         chase_focus = (best_actions.index_select(-1, torch.tensor([2]))).numpy()
         #print(move_rotate[: 1, :])
         casts = best_actions.index_select(
-            -1, torch.tensor([3, 4, 5])
+            -1, torch.tensor([3, 4, 5, 6])
         ).argmax(-1, keepdim=True).numpy()
         focuses = best_actions.index_select(
-            -1, torch.tensor([6, 7, 8, 9, 10, 11, 12])
+            -1, torch.tensor([7, 8, 9, 10, 11, 12, 13])
         ).argmax(-1, keepdim=True).numpy()
         # print(move_rotate_cf.shape, casts.shape, focuses.shape)
         actions = np.concatenate([

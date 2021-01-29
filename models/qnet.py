@@ -6,7 +6,7 @@ import numpy as np
 
 
 class Qnet(nn.Module):
-    def __init__(self, n_observations=64, n_actions=13, emb_size=4):
+    def __init__(self, n_observations=64, n_actions=14, emb_size=4):
         super(Qnet, self).__init__()
         self.n_observations = n_observations
         self.n_actions = n_actions
@@ -46,7 +46,7 @@ class Qnet(nn.Module):
             move = np.random.uniform(-1, 1, (size, 1, k))
             rotate = np.random.uniform(-1, 1, (size, 1, k))
             chase_focus = np.random.random(((size, 1, k)))
-            cast = np.random.randint(0, 3, (size, 1, k))
+            cast = np.random.randint(0, 4, (size, 1, k))
             focus = np.random.randint(0, 7, (size, 1, k))
             result = np.concatenate([move, rotate, chase_focus, cast, focus], axis=1)
             # return result
@@ -55,10 +55,10 @@ class Qnet(nn.Module):
             out = out.detach().cpu()
             move_rotate_cf = out.index_select(-1, torch.tensor([0, 1, 2])).numpy()
             casts = out.index_select(
-                -1, torch.tensor([3, 4, 5])
+                -1, torch.tensor([3, 4, 5, 6])
             ).argmax(-1, keepdim=True).numpy()
             focuses = out.index_select(
-                -1, torch.tensor([6, 7, 8, 9, 10, 11, 12])
+                -1, torch.tensor([7, 8, 9, 10, 11, 12, 13])
             ).argmax(-1, keepdim=True).numpy()
             # print(move_rotate_cf.shape, casts.shape, focuses.shape)
             result = np.concatenate([
@@ -77,4 +77,3 @@ class Qnet(nn.Module):
             input_dim = h
         layers.append(nn.Linear(input_dim, output_size))
         return nn.Sequential(*layers)
-  

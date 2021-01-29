@@ -41,7 +41,7 @@ REWARD_FUNCTION = {
     "damageEnemyStatue": 4,
     "damageEnemyUnit": 2,
     "killEnemyStatue": 4,
-    "killEnemyUnit": 2,
+    "killEnemyUnit": 4,
     "healFriendlyStatue": 1,
     "healTeammate1": 2,
     "healTeammate2": 2,
@@ -49,17 +49,17 @@ REWARD_FUNCTION = {
     "timeSpentHomeTerritory": 0,
     "timeSpentAwayTerritory": 0,
     "timeSpentAwayBase": 0,
-    "damageTaken": -6,
+    "damageTaken": -2,
     "friendlyFire": -10,
-    "healEnemy": -10,
+    "healEnemy": -4,
     "fallDamageTaken": -1000,
-    "statueDamageTaken": -20,
+    "statueDamageTaken": -2,
     "manualBonus": 0,
-    "victory": 1000,
-    "loss": -1000,
+    "victory": 100,
+    "loss": -100,
     "tie": 0,
-    "teamSpirit": 0.5,
-    "timeScaling": 0.8,
+    "teamSpirit": 0,
+    "timeScaling": 0,
 }
 
 
@@ -74,7 +74,7 @@ def train(q, q_target, memory, optimizer, batch_size=32, n_actions=50,
         assert action.shape[-1] == 5
         actions = np.concatenate([
             action[..., :3],
-            np.eye(3)[action[..., 3].astype(np.int)],
+            np.eye(4)[action[..., 3].astype(np.int)],
             np.eye(7)[action[..., 4].astype(np.int)]
         ], axis=-1)
         actions = np.expand_dims(actions, axis=1)
@@ -135,15 +135,15 @@ def record_game(env, q, savedir, n_episode, n_actions=50, use_gpu=False):
             for row, i in zip(torch.unbind(rand_actions, 0), best_ids.unbind(0))
         ], axis=0).detach().cpu()
         # print(best_actions.shape)
-        assert best_actions.shape[1] == 13 and len(best_actions.shape) == 2
+        assert best_actions.shape[1] == 14 and len(best_actions.shape) == 2
         move_rotate = best_actions.index_select(-1, torch.tensor([0, 1])).numpy()
         chase_focus = (best_actions.index_select(-1, torch.tensor([2]))).numpy()
         print("best_actions:", best_actions[: 1, :])
         casts = best_actions.index_select(
-            -1, torch.tensor([3, 4, 5])
+            -1, torch.tensor([3, 4, 5, 6])
         ).argmax(-1, keepdim=True).numpy()
         focuses = best_actions.index_select(
-            -1, torch.tensor([6, 7, 8, 9, 10, 11, 12])
+            -1, torch.tensor([7, 8, 9, 10, 11, 12, 13])
         ).argmax(-1, keepdim=True).numpy()
         # print(move_rotate_cf.shape, casts.shape, focuses.shape)
         actions = np.concatenate([
