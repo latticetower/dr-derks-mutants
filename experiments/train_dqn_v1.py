@@ -121,7 +121,7 @@ def record_game(env, q, savedir, n_episode, n_actions=50, use_gpu=False):
         observations = torch.from_numpy(observations).float()
         rand_actions = torch.from_numpy(
             random_actions(observations.shape[0], k=n_actions)).float()
-        if use_cuda:
+        if use_gpu:
             observations = observations.cuda()
             rand_actions = rand_actions.cuda()
         rewards = q.forward(observations, rand_actions)
@@ -180,7 +180,7 @@ def main(env, n_episodes=10000, start_training_at=2000, print_interval=20,
     # env = gym.make('CartPole-v1') 
     q = Qnet()
     q_target = Qnet()
-    if use_cuda:
+    if use_gpu:
         q.cuda()
         q_target.cuda()
     q_target.load_state_dict(q.state_dict())

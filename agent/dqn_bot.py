@@ -20,7 +20,7 @@ class DerkPlayer:
         self.n_agents = n_agents
         self.action_space = action_space
         self.network = torch.load(WEIGHTS_FILE).eval()
-        self.use_cuda = torch.cuda.is_available()
+        self.use_gpu = torch.cuda.is_available()
 
     def signal_env_reset(self, obs):
         """
@@ -54,7 +54,7 @@ class DerkPlayer:
         observations = torch.from_numpy(observations).float()
         rand_actions = torch.from_numpy(
             random_actions(observations.shape[0], k=n_actions)).float()
-        if self.use_cuda:
+        if self.use_gpu:
             observations = observations.cuda()
             rand_actions = rand_actions.cuda()
         rewards = self.network.forward(observations, rand_actions)
