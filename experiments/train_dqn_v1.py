@@ -171,6 +171,8 @@ def record_game(env, q, savedir, n_episode, n_actions=50, use_gpu=False):
     model_path = os.path.join(gamedir, "torch_model.pth")
     torch.save(q.state_dict(), model_path)
     shutil.copy(model_path, WEIGHTS_FILE)
+    with open("weights/description_dqn_v1.txt", 'w') as f:
+        f.write("Source: " + model_path)
     return gamedir
 
 
@@ -185,7 +187,7 @@ def main(env, n_episodes=10000, start_training_at=2000, print_interval=20,
         q_target.cuda()
     q_target.load_state_dict(q.state_dict())
     q_target.eval()
-    memory = ReplayBuffer()
+    memory = ReplayBuffer(5000)
 
     score = None
     optimizer = optim.Adam(q.parameters(), lr=learning_rate)
