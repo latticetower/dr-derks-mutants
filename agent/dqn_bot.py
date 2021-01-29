@@ -1,5 +1,6 @@
 import numpy as np
 import torch
+
 from models.qnet import Qnet
 from utils.common import random_actions
 
@@ -20,10 +21,12 @@ class DerkPlayer:
         self.n_agents = n_agents
         self.action_space = action_space
         self.network = Qnet()
-        self.network.load_state_dict(torch.load(WEIGHTS_FILE))
-        self.network.eval()
         self.use_gpu = torch.cuda.is_available()
-
+        self.network.load_state_dict(torch.load(WEIGHTS_FILE))
+        if self.use_gpu:
+            self.network.cuda()
+        self.network.eval()
+        
     def signal_env_reset(self, obs):
         """
         env.reset() was called
@@ -70,7 +73,7 @@ class DerkPlayer:
             for row, i in zip(torch.unbind(rand_actions, 0), best_ids.unbind(0))
         ], axis=0).detach().cpu()
         # print(best_actions.shape)
-        assert best_actions.shape == (6, 13)
+        assert len(best_actions.shape)==2 and best_actions.shape[1] == 13
         move_rotate = best_actions.index_select(-1, torch.tensor([0, 1])).numpy()
         chase_focus = (best_actions.index_select(-1, torch.tensor([2]))).numpy()
         #print(move_rotate[: 1, :])
@@ -87,6 +90,6 @@ class DerkPlayer:
             casts,
             focuses
         ], axis=-1)
-        assert len(actions.shape)==2 and actions.shape[1] == 5
+        assert len(actions.shape) == 2 and actions.shape[1] == 5
 
         return actions
