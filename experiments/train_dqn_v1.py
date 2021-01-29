@@ -138,7 +138,7 @@ def record_game(env, q, savedir, n_episode, n_actions=50, use_gpu=False):
         assert best_actions.shape == (6, 13)
         move_rotate = best_actions.index_select(-1, torch.tensor([0, 1])).numpy()
         chase_focus = (best_actions.index_select(-1, torch.tensor([2]))).numpy()
-        print(move_rotate[: 1, :])
+        print("best_actions:", best_actions[: 1, :])
         casts = best_actions.index_select(
             -1, torch.tensor([3, 4, 5])
         ).argmax(-1, keepdim=True).numpy()
@@ -152,7 +152,7 @@ def record_game(env, q, savedir, n_episode, n_actions=50, use_gpu=False):
             casts,
             focuses
         ], axis=-1)
-        assert actions.shape == (6, 13)
+        assert actions.shape == (6, 5)
         next_observations, r, done, info = env.step(actions)
         image_path = os.path.join(gamedir, f"frame_{i}.png")
 
