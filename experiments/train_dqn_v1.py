@@ -67,7 +67,7 @@ def train(q, q_target, memory, optimizer, batch_size=32, n_actions=50,
           use_gpu=False):
     q.train()
     losses = []
-    for i in range(100):
+    for i in range(10):
         loss = 0.0
         optimizer.zero_grad()
         state, action, r, s_prime, done_mask = memory.sample(batch_size)
@@ -179,7 +179,7 @@ def record_game(env, q, savedir, n_episode, n_actions=50, use_gpu=False):
 def main(env, n_episodes=10000, start_training_at=2000, print_interval=20,
          batch_size=32, experiment_tags=[], tg=False, savedir="saves",
          n_actions=50, use_gpu=False):
-    # env = gym.make('CartPole-v1') 
+    # env = gym.make('CartPole-v1')
     q = Qnet()
     q_target = Qnet()
     if use_gpu:
@@ -187,7 +187,7 @@ def main(env, n_episodes=10000, start_training_at=2000, print_interval=20,
         q_target.cuda()
     q_target.load_state_dict(q.state_dict())
     q_target.eval()
-    memory = ReplayBuffer(5000)
+    memory = ReplayBuffer(10000)
 
     score = None
     optimizer = optim.Adam(q.parameters(), lr=learning_rate)
@@ -209,7 +209,9 @@ def main(env, n_episodes=10000, start_training_at=2000, print_interval=20,
             done = np.all(done)
 
             done_mask = 0.0 if done else 1.0
-            memory.put((observations, actions, r, next_observations, done_mask))
+            for obs, action, reward, next_obs in zip(observations, actions, r, next_observations):
+                memory.put((obs, action, reward/100., next_obs, done_mask))
+            #memory.put((observations, actions, r/100., next_observations, done_mask))
             observations = next_observations
             # print(next_observations.shape)
             #print("R=", r)
@@ -219,9 +221,13 @@ def main(env, n_episodes=10000, start_training_at=2000, print_interval=20,
                 score += np.asarray([x for x in r])
             if done:
                 break
-        if n_epi <= 0 or memory.size() <= batch_size:
+        if n_epi <= 0:
+            print("Collecting ReplayBuffer at", n_epi, "memory=", memory.size())
+        if memory.size() <= batch_size:
             continue
+
         losses = train(q, q_target, memory, optimizer, n_actions=n_actions,
+                       batch_size=batch_size,
                        use_gpu=use_gpu)
 
         if n_epi % print_interval == 0 and n_epi > 0:
@@ -257,6 +263,9 @@ if __name__ == '__main__':
         "--n_actions", type=int, default=50,
         help="number of actions to sample")
     parser.add_argument(
+        "--n_arenas", type=int, default=1, help="number of arenas"
+    )
+    parser.add_argument(
         "--batch_size", type=int, default=32)
     parser.add_argument(
         "--gpu", action="store_true", default=True,
@@ -268,7 +277,7 @@ if __name__ == '__main__':
     )
 
     args = parser.parse_args()
-    
+
     seed_everything(args.seed)
 
     token = os.environ.get('TELEGRAM_BOT_TOKEN', None)
@@ -281,7 +290,8 @@ if __name__ == '__main__':
     commit_hash = subprocess.check_output([
         'git', 'rev-parse', '--short', 'HEAD']).decode('ascii').strip('\n')
     experiment_tags = ["dqn_v1", f"commit_{str(commit_hash)}"]
-    experiment_tags.extend(args.tag)
+    tags = list(np.asarray(args.tag).flatten())
+    experiment_tags.extend(tags)
 
     tgwriter = TelegramWriter(token, channel)
     with tgwriter.post() as f:
@@ -296,6 +306,7 @@ if __name__ == '__main__':
     env = DerkEnv(
         mode="train",
         turbo_mode=True,
+        n_arenas=args.n_arenas,
         home_team=[
             {'primaryColor': '#3AA8C1'},
             {'primaryColor': '#BD559C', 'slots': ['Talons', None, None]},
