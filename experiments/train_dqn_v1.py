@@ -187,7 +187,7 @@ def main(env, n_episodes=10000, start_training_at=2000, print_interval=20,
         q_target.cuda()
     q_target.load_state_dict(q.state_dict())
     q_target.eval()
-    memory = ReplayBuffer(10000)
+    memory = ReplayBuffer(50000)
 
     score = None
     optimizer = optim.Adam(q.parameters(), lr=learning_rate)
