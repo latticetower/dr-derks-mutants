@@ -125,10 +125,10 @@ def record_game(env, q, savedir, n_episode, n_actions=50, use_gpu=False):
             observations = observations.cuda()
             rand_actions = rand_actions.cuda()
         rewards = q.forward(observations, rand_actions)
-        print("rewards", rewards.shape)
+        # print("rewards", rewards.shape)
         best_ids = rewards.argmax(dim=1)
         best_rewards = rewards.index_select(1, best_ids)
-        print("in record_game:", rewards.shape, best_rewards, best_ids.shape, rand_actions.shape)
+        # print("in record_game:", rewards.shape, best_rewards, best_ids.shape, rand_actions.shape)
         # best_actions = rand_actions.gather(1, best_ids).detach().cpu()
         best_actions = torch.stack([
             row[i].squeeze()
@@ -268,6 +268,8 @@ if __name__ == '__main__':
     parser.add_argument(
         "--batch_size", type=int, default=32)
     parser.add_argument(
+        "--print_interval", type=int, default=20)
+    parser.add_argument(
         "--gpu", action="store_true", default=True,
         help="Use GPU if available (default device)"
     )
@@ -324,7 +326,7 @@ if __name__ == '__main__':
     main(env,
          n_episodes=10000,
          start_training_at=max(args.batch_size*2, 200),
-         print_interval=20,
+         print_interval=args.print_interval,
          batch_size=args.batch_size,
          experiment_tags=experiment_tags,
          tg=(not args.notg),
