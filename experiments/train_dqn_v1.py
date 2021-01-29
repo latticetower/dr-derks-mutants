@@ -175,7 +175,8 @@ def record_game(env, q, savedir, n_episode, n_actions=50, use_gpu=False):
 
 
 def main(env, n_episodes=10000, start_training_at=2000, print_interval=20,
-         batch_size=32, experiment_tags=[], tg=False, use_gpu=False):
+         batch_size=32, experiment_tags=[], tg=False, n_actions=50,
+         use_gpu=False):
     # env = gym.make('CartPole-v1') 
     q = Qnet()
     q_target = Qnet()
@@ -218,7 +219,8 @@ def main(env, n_episodes=10000, start_training_at=2000, print_interval=20,
                 break
         if n_epi <= 0 or memory.size() <= batch_size:
             continue
-        losses = train(q, q_target, memory, optimizer, use_gpu=use_gpu)
+        losses = train(q, q_target, memory, optimizer, n_actions=n_actions,
+                       use_gpu=use_gpu)
 
         if n_epi % print_interval == 0 and n_epi > 0:
             q.eval()
@@ -250,6 +252,9 @@ if __name__ == '__main__':
     parser.add_argument(
         "--seed", type=int, default=SEED,
         help="random seed to make run deterministic")
+    parser.add_argument(
+        "--n_actions", type=int, default=50,
+        help="number of actions to sample")
     parser.add_argument(
         "--gpu", action="store_true", default=True,
         help="Use GPU if available (default device)"
@@ -303,6 +308,7 @@ if __name__ == '__main__':
          batch_size=4,
          experiment_tags=experiment_tags,
          tg=(not args.notg),
+         n_actions=args.n_actions,
          use_gpu=(args.gpu and torch.cuda.is_available())
     )
     env.close()

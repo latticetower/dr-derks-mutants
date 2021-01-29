@@ -1,17 +1,16 @@
+import gym
 from gym_derk.envs import DerkEnv
 from gym_derk import ObservationKeys
-import numpy as np
-import gym
 import math
+import numpy as np
 import os.path
 
 from models.network_v1 import Network
 
-
 SEED = 137
 np.random.seed(SEED)
 
-NPZ_FILENAME = "weights/model_v1.npz"
+NPZ_FILENAME = "weights/model_v2.npz"
 REWARD_FUNCTION = {
     "damageEnemyStatue": 4,
     "damageEnemyUnit": 2,
@@ -54,7 +53,6 @@ env = DerkEnv(
     session_args = {
         "reward_function": REWARD_FUNCTION
     }
-   
 )
 
 
@@ -67,12 +65,17 @@ else:
     biases = None
 
 
-networks = [Network(weights, biases) for i in range(env.n_agents)]
+networks = [
+    Network(weights, biases) for i in range(env.n_agents)
+]
 
-for e in range(20):
+for e in range(1):  # 20
     observation_n = env.reset()
     while True:
-        action_n = [networks[i].forward(observation_n[i]) for i in range(env.n_agents)]
+        action_n = [
+            networks[i].forward(observation_n[i])
+            for i in range(env.n_agents)
+        ]
         observation_n, reward_n, done_n, info = env.step(action_n)
         if all(done_n):
             print("Episode finished")
