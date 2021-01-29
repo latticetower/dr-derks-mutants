@@ -1,8 +1,9 @@
 import numpy as np
-from models.network_v1 import Network
+import torch
+from models.qnet import Qnet
 
 
-NPZ_FILENAME = "weights/model_v2.npz"
+WEIGHTS_FILE = "weights/model_dqn_v1.pth"
 
 
 class DerkPlayer:
@@ -18,12 +19,8 @@ class DerkPlayer:
         """
         self.n_agents = n_agents
         self.action_space = action_space
-        with np.load(NPZ_FILENAME) as data:
-            weights = np.asarray(data['weights']).copy()
-            biases = np.asarray(data['biases']).copy()
-        self.networks = [
-            Network(weights, biases) for i in range(n_agents)
-        ]
+        self.network = torch.load(WEIGHTS_FILE).eval()
+        self.use_cuda = torch.cuda.is_available()
 
     def signal_env_reset(self, obs):
         """
@@ -51,16 +48,43 @@ class DerkPlayer:
                         4 = focus enemy statue
                     5 - 7 = focus enemy
         """
-        observation_n, _rew_n, _done_n, _info_n = env_step_ret
+        n_actions = 50
+        observations, _rew_n, _done_n, _info_n = env_step_ret
+        # sample actions
+        observations = torch.from_numpy(observations).float()
+        rand_actions = torch.from_numpy(
+            random_actions(observations.shape[0], k=n_actions)).float()
+        if self.use_cuda:
+            observations = observations.cuda()
+            rand_actions = rand_actions.cuda()
+        rewards = self.network.forward(observations, rand_actions)
+        #print("rewards", rewards.shape)
+        best_ids = rewards.argmax(dim=1)
+        best_rewards = rewards.index_select(1, best_ids)
+        #print("in record_game:", rewards.shape, best_rewards, best_ids.shape, rand_actions.shape)
+        # best_actions = rand_actions.gather(1, best_ids).detach().cpu()
+        best_actions = torch.stack([
+            row[i].squeeze()
+            for row, i in zip(torch.unbind(rand_actions, 0), best_ids.unbind(0))
+        ], axis=0).detach().cpu()
+        # print(best_actions.shape)
+        assert best_actions.shape == (6, 13)
+        move_rotate = best_actions.index_select(-1, torch.tensor([0, 1])).numpy()
+        chase_focus = (best_actions.index_select(-1, torch.tensor([2]))).numpy()
+        #print(move_rotate[: 1, :])
+        casts = best_actions.index_select(
+            -1, torch.tensor([3, 4, 5])
+        ).argmax(-1, keepdim=True).numpy()
+        focuses = best_actions.index_select(
+            -1, torch.tensor([6, 7, 8, 9, 10, 11, 12])
+        ).argmax(-1, keepdim=True).numpy()
+        # print(move_rotate_cf.shape, casts.shape, focuses.shape)
+        actions = np.concatenate([
+            move_rotate,
+            chase_focus,
+            casts,
+            focuses
+        ], axis=-1)
+        assert len(actions.shape)==2 and actions.shape[1] == 5
 
-        # null action
-        _null_action = np.zeros((self.n_agents, 5))
-
-        # random action
-        #_random_action = [self.action_space.sample() for i in range(self.n_agents)]
-        action_n = [
-            self.networks[i].forward(observation_n[i])
-            for i in range(self.n_agents)
-        ]
-
-        return action_n
+        return actions
