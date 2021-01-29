@@ -310,7 +310,7 @@ if __name__ == '__main__':
     )
     main(env,
          n_episodes=10000,
-         start_training_at=2000,
+         start_training_at=max(args.batch_size*2, 200),
          print_interval=20,
          batch_size=args.batch_size,
          experiment_tags=experiment_tags,
