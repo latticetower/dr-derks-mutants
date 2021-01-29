@@ -192,7 +192,7 @@ def main(env, n_episodes=10000, start_training_at=2000, print_interval=20,
     score = None
     optimizer = optim.Adam(q.parameters(), lr=learning_rate)
 
-    for n_epi in range(-start_training_at, n_episodes):
+    for n_epi in range(n_episodes):
         epsilon = max(0.01, 0.08 - 0.01*(n_epi/200))
         # Linear annealing from 8% to 1%
         observations = env.reset()
@@ -299,7 +299,7 @@ if __name__ == '__main__':
         tags = " ".join(["#" + t for t in experiment_tags])
         f.add_text(f"Start new experiment {tags} ")
         f.add_param("Commit", commit_hash)
-        f.add_param("Start command", repr("".join(sys.argv)))
+        f.add_param("Start command", repr(" ".join(sys.argv)))
         # f.add_media("protein.gif")
         # f.add_text("#hashtag")
 
