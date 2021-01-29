@@ -14,6 +14,7 @@ import matplotlib.animation as animation
 import numpy as np
 import os
 import random
+import shutil
 import subprocess
 import sys
 import torch
@@ -26,9 +27,12 @@ from utils.replay_buffer import ReplayBuffer
 from utils.tg_writer import TelegramWriter
 from utils.common import random_actions
 from utils.common import save_mp4_files
+from utils.common import seed_everything
+from utils.common import make_screenshot
 
 
-NPZ_FILENAME = "weights/model_v2.npz"
+WEIGHTS_FILE = "weights/model_dqn_v1.pth"
+SEED = 1337
 learning_rate = 0.0005
 gamma         = 0.98
 buffer_limit  = 50000
@@ -59,50 +63,51 @@ REWARD_FUNCTION = {
 }
 
 
-def train(q, q_target, memory, optimizer, batch_size=32):
+def train(q, q_target, memory, optimizer, batch_size=32, n_actions=50,
+          use_gpu=False):
     q.train()
     losses = []
-    for i in range(10):
-        loss = []
+    for i in range(100):
+        loss = 0.0
         optimizer.zero_grad()
-        for i in range(10):
-            state, action, r, s_prime, done_mask = memory.sample(batch_size)
-            assert action.shape[-1] == 5
-            actions = np.concatenate([
-                action[..., :3],
-                np.eye(3)[action[..., 3].astype(np.int)],
-                np.eye(7)[action[..., 4].astype(np.int)]
-            ], axis=-1)
-            actions = np.expand_dims(actions, axis=1)
-            if len(actions.shape) != 3:
-                print(action.shape)
-                print(actions.shape)
-                print(done_mask)
-            actions = torch.from_numpy(actions).float()
-            q_a = q(state, actions).squeeze(1)
+        state, action, r, s_prime, done_mask = memory.sample(batch_size)
+        assert action.shape[-1] == 5
+        actions = np.concatenate([
+            action[..., :3],
+            np.eye(3)[action[..., 3].astype(np.int)],
+            np.eye(7)[action[..., 4].astype(np.int)]
+        ], axis=-1)
+        actions = np.expand_dims(actions, axis=1)
+        if len(actions.shape) != 3:
+            print(action.shape)
+            print(actions.shape)
+            print(done_mask)
+        actions = torch.from_numpy(actions).float()
+        if use_gpu:
+            state = state.cuda()
+            actions = actions.cuda()
+        q_a = q(state, actions).squeeze(1)
 
-            rand_actions = torch.from_numpy(
-                random_actions(s_prime.shape[0], k=40)).float()
-            max_q_prime = q_target(s_prime, rand_actions).argmax(dim=1)
-            r = torch.from_numpy(r).float()
-            done_mask = torch.from_numpy(done_mask).float()
-            target = r + gamma * max_q_prime * done_mask
-            loss.append(F.smooth_l1_loss(q_a, target.detach()))
-        loss = torch.stack(loss).mean()
+        rand_actions = torch.from_numpy(
+            random_actions(s_prime.shape[0], k=n_actions)).float()
+        if use_gpu:
+            s_prime = s_prime.cuda()
+            rand_actions = rand_actions.cuda()
+        max_q_prime = q_target(s_prime, rand_actions).argmax(dim=1)
+        r = torch.from_numpy(r).float().type_as(max_q_prime)
+        done_mask = torch.from_numpy(done_mask).float().type_as(max_q_prime)
+        target = r + gamma * max_q_prime * done_mask
+
+        loss = F.smooth_l1_loss(q_a, target.detach())
         #print("Loss:", loss.item())
-        losses.append(loss.item())
+        losses.append(loss.detach().cpu().item())
         loss.backward()
         optimizer.step()
     return losses
 
 
-
-async def make_screenshot(env, path='example.png'):
-    # loop = asyncio.get_running_loop()
-    await env.app.page.screenshot({'path': path})
-
-
-def record_game(env, q, savedir, n_episode):
+def record_game(env, q, savedir, n_episode, n_actions=50, use_gpu=False):
+    q.eval()
     gamedir = os.path.join(savedir, f"{n_episode:010d}")
     if not os.path.exists(gamedir):
         os.makedirs(gamedir)
@@ -115,7 +120,10 @@ def record_game(env, q, savedir, n_episode):
     while not done:
         observations = torch.from_numpy(observations).float()
         rand_actions = torch.from_numpy(
-            random_actions(observations.shape[0], k=40)).float()
+            random_actions(observations.shape[0], k=n_actions)).float()
+        if use_cuda:
+            observations = observations.cuda()
+            rand_actions = rand_actions.cuda()
         rewards = q.forward(observations, rand_actions)
         print("rewards", rewards.shape)
         best_ids = rewards.argmax(dim=1)
@@ -130,7 +138,7 @@ def record_game(env, q, savedir, n_episode):
         assert best_actions.shape == (6, 13)
         move_rotate = best_actions.index_select(-1, torch.tensor([0, 1])).numpy()
         chase_focus = (best_actions.index_select(-1, torch.tensor([2]))).numpy()
-        print(move_rotate[: 4, :4])
+        print(move_rotate[: 1, :])
         casts = best_actions.index_select(
             -1, torch.tensor([3, 4, 5])
         ).argmax(-1, keepdim=True).numpy()
@@ -144,6 +152,7 @@ def record_game(env, q, savedir, n_episode):
             casts,
             focuses
         ], axis=-1)
+        assert actions.shape == (6, 13)
         next_observations, r, done, info = env.step(actions)
         image_path = os.path.join(gamedir, f"frame_{i}.png")
 
@@ -159,16 +168,20 @@ def record_game(env, q, savedir, n_episode):
     # to do: save folder contents here + model
     #filename = save_frames_as_gif(
     #    image_frames, gamedir, filename=f'animation_{n_episode}.gif')
-    torch.save(q.state_dict(),
-        os.path.join(gamedir, "torch_model.pth"))
+    model_path = os.path.join(gamedir, "torch_model.pth")
+    torch.save(q.state_dict(), model_path)
+    shutil.copy(model_path, WEIGHTS_FILE)
     return gamedir
 
 
 def main(env, n_episodes=10000, start_training_at=2000, print_interval=20,
-         batch_size=32, experiment_tags=[], tg=False):
+         batch_size=32, experiment_tags=[], tg=False, use_gpu=False):
     # env = gym.make('CartPole-v1') 
     q = Qnet()
     q_target = Qnet()
+    if use_cuda:
+        q.cuda()
+        q_target.cuda()
     q_target.load_state_dict(q.state_dict())
     q_target.eval()
     memory = ReplayBuffer()
@@ -181,7 +194,7 @@ def main(env, n_episodes=10000, start_training_at=2000, print_interval=20,
         # Linear annealing from 8% to 1%
         observations = env.reset()
         done = False
-        q.eval()
+
         while not done:
             observations = torch.from_numpy(observations).float()
             actions = random_actions(
@@ -205,15 +218,16 @@ def main(env, n_episodes=10000, start_training_at=2000, print_interval=20,
                 break
         if n_epi <= 0 or memory.size() <= batch_size:
             continue
-        losses = train(q, q_target, memory, optimizer)
+        losses = train(q, q_target, memory, optimizer, use_gpu=use_gpu)
 
         if n_epi % print_interval == 0 and n_epi > 0:
+            q.eval()
             q_target.load_state_dict(q.state_dict())
             print("n_episode :{}, score : {}, {}, n_buffer : {}, eps : {}%".format(
                 n_epi, score, print_interval, memory.size(), epsilon))
             savedir = "saves"
 
-            image_dir = record_game(env, q, savedir, n_epi)
+            image_dir = record_game(env, q, savedir, n_epi, use_gpu=use_gpu)
             save_mp4_files(
                 image_dir, tg=tg, episode=n_epi, score=score,
                 size=memory.size(), tags=experiment_tags)
@@ -233,8 +247,17 @@ if __name__ == '__main__':
     parser.add_argument(
         "--notg", default=False, action="store_true",
         help="don't write to telegram")
+    parser.add_argument(
+        "--seed", type=int, default=SEED,
+        help="random seed to make run deterministic")
+    parser.add_argument(
+        "--gpu", action="store_true", default=True,
+        help="Use GPU if available (default device)"
+    )
 
     args = parser.parse_args()
+    
+    seed_everything(args.seed)
 
     token = os.environ.get('TELEGRAM_BOT_TOKEN', None)
     channel = os.environ.get('TELEGRAM_CHANNEL', None)
@@ -279,6 +302,7 @@ if __name__ == '__main__':
          print_interval=2,
          batch_size=4,
          experiment_tags=experiment_tags,
-         tg=(not args.notg)
+         tg=(not args.notg),
+         use_gpu=(args.gpu and torch.cuda.is_available())
     )
     env.close()

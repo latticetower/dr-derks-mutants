@@ -5,6 +5,21 @@ import subprocess
 import torch
 
 
+def seed_everything(seed):
+    torch.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    torch.cuda.manual_seed(seed)
+    np.random.seed(seed)
+    random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+
+
+async def make_screenshot(env, path='example.png'):
+    # loop = asyncio.get_running_loop()
+    await env.app.page.screenshot({'path': path})
+
+
 def random_actions(batch_size=6, k=1, for_env=False):
     move = np.random.uniform(-1, 1, (batch_size * k, 1))
     rotate = np.random.uniform(-1, 1, (batch_size * k, 1))
