@@ -100,8 +100,13 @@ class DerkAgent(object):
         self.casting_slots = np.arange(4)
         self.change_focuses = np.arange(8)
 
-    def get_action_space(self) -> iter:
-        return product(self.movements, self.rotates, self.chase_focuses, self.casting_slots, self.change_focuses)
+        self.action_space = self.get_action_space()
+
+    def get_action_space(self) -> torch.tensor:
+        return torch.tensor([action for action in
+                             product(self.movements, self.rotates, self.chase_focuses, self.casting_slots,
+                                     self.change_focuses)],
+                            dtype=torch.float32)
 
     def signal_env_reset(self, obs):
         """
@@ -151,22 +156,16 @@ class DerkAgent(object):
             agents_observations = env_step[0]
 
             for i in range(self.n_agents):
-                best_action = None
-                best_action_value = -1
+                agent_observation = torch.tensor([agents_observations[i] for _ in range(len(self.action_space))],
+                                                 dtype=torch.float32)
 
-                for action in self.get_action_space():  # TODO slow realization ...
-                    single_step = torch.cat([torch.tensor(agents_observations[i], dtype=torch.float32),
-                                             torch.tensor(action, dtype=torch.float32)],
-                                            dim=0).reshape(1, -1)
-                    single_step = single_step.to(self.device)
+                single_step = torch.cat([agent_observation, self.action_space], dim=1)
 
-                    value = self.estimator(single_step).detach().cpu().reshape(-1)
+                values = self.estimator(single_step).detach().cpu().reshape(-1)
 
-                    if float(value) > best_action_value:
-                        best_action_value = value
-                        best_action = action
+                max_value_index = torch.argmax(values)
 
-                bots_actions.append(best_action)
+                bots_actions.append(self.action_space[max_value_index].numpy())
 
         return np.array(bots_actions)
 

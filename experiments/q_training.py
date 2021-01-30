@@ -52,8 +52,6 @@ def epoch_games_history_collection(env: DerkEnv, agent: DerkAgent, game_history:
             while True:
                 agents_actions = agent.take_action(env_step)
 
-                print(agents_actions)
-
                 agents_observations, agents_reward, agents_done, _ = env.step(agents_actions)
 
                 game_history.put(agents_observations, agents_actions, agents_reward, agents_done)
@@ -81,7 +79,7 @@ def epoch_training(estimator: QNet, optimizer, loss_func: eval, game_history: Ga
 
             predicted_rewards = estimator(batch_steps)  # .detach().cpu()
 
-            print(predicted_rewards[0], batch_rewards[0])
+            # print(predicted_rewards[0], batch_rewards[0])
 
             loss = loss_func(predicted_rewards, batch_rewards.reshape(-1, 1))  # TODO CHECK
             loss.backward()
@@ -149,7 +147,7 @@ def main():
 
     try:
         for i_epoch in range(1, game_epochs + 1):
-            epsilon = max(0.01, 0.65 - 0.01 * (i_epoch / 200))  # Linear annealing from 8% to 1%  0.08
+            epsilon = max(0.01, 0.55 - 0.01 * (i_epoch / 200))  # Linear annealing from 8% to 1%  0.08
 
             agent.update_epsilon(epsilon)
             game_history.reset()
