@@ -1,3 +1,6 @@
+import _init_environment  # это мое - не обрашай внимания
+
+import asyncio
 from os import mkdir
 from os.path import exists, join
 
@@ -9,7 +12,6 @@ from torch.utils.data import Dataset, DataLoader
 
 import config
 from agent.bot import DerkAgent
-# import _init_environment  # это мое - не обрашай внимания
 from models.nn import QNet
 
 
@@ -19,38 +21,45 @@ class GameHistory(Dataset):
         self.history = list()  # (observations, actions, reward, done)
 
     def put(self, observations, actions, rewards, done) -> None:
-        for i in range(len(observations)):
+        for i in range(len(done)):
             self.history.append((observations[i], actions[i], rewards[i], done[i]))
 
-    def clear(self) -> None:
+    def reset(self) -> None:
         self.history = list()
 
     def is_full(self) -> bool:
-        return len(self.history) < self.max_game_history_size
+        return len(self.history) >= self.max_game_history_size
 
     def __getitem__(self, index: int) -> (torch.tensor, torch.tensor, torch.tensor):
-        return torch.tensor(self.history[index][0], dtype=torch.float32), \
-               torch.tensor(self.history[index][1], dtype=torch.float32), \
-               torch.tensor(self.history[index][2], dtype=torch.float32)  # (observations, actions, reward)
+        return torch.cat([torch.tensor(self.history[index][0], dtype=torch.float32),
+                          torch.tensor(self.history[index][1], dtype=torch.float32)], dim=0), \
+               torch.tensor(self.history[index][2], dtype=torch.float32)  # ([observations, actions], reward)
 
     def __len__(self) -> int:
         return len(self.history)
 
 
 def epoch_games_history_collection(env: DerkEnv, agent: DerkAgent, game_history: GameHistory) -> None:
-    while not game_history.is_full():
-        agent.signal_env_reset(env.reset())
-        env_step_ret = await env.step()
+    print('epoch_games_history_collection')
 
-        while True:
-            agents_actions = [agent.take_action(env_step_ret[i]) for i in range(env.n_agents)]  # TODO take_action
+    with torch.no_grad():
+        while not game_history.is_full():
+            print('game')
 
-            agents_observations, agents_reward, agents_done, _ = env.step(agents_actions)
+            agent.signal_env_reset(env.reset())
+            env_step = env.step()
 
-            game_history.put(agents_observations, agents_actions, agents_reward, agents_done)
+            while True:
+                agents_actions = agent.take_action(env_step)
 
-            if all(agents_done):
-                break
+                print(agents_actions)
+
+                agents_observations, agents_reward, agents_done, _ = env.step(agents_actions)
+
+                game_history.put(agents_observations, agents_actions, agents_reward, agents_done)
+
+                if all(agents_done):
+                    break
 
 
 def epoch_training(estimator: QNet, optimizer, loss_func: eval, game_history: GameHistory, batch_size: int,
@@ -64,16 +73,17 @@ def epoch_training(estimator: QNet, optimizer, loss_func: eval, game_history: Ga
         batch_idx = 1
         loss = 0.0
 
-        for batch_idx, (batch_observations, batch_actions, batch_rewards) in enumerate(train_loader, start=1):
-            batch_observations = batch_observations.to(device)
-            batch_actions = batch_actions.to(device)
+        for batch_idx, (batch_steps, batch_rewards) in enumerate(train_loader, start=1):
+            batch_steps = batch_steps.to(device)
             batch_rewards = batch_rewards.to(device)
 
             optimizer.zero_grad()
 
-            predicted_rewards = estimator(batch_observations, batch_actions)  # TODO
+            predicted_rewards = estimator(batch_steps)  # .detach().cpu()
 
-            loss = loss_func(predicted_rewards, batch_rewards.long())  # TODO CHECK
+            print(predicted_rewards[0], batch_rewards[0])
+
+            loss = loss_func(predicted_rewards, batch_rewards.reshape(-1, 1))  # TODO CHECK
             loss.backward()
             loss += loss.item()
 
@@ -97,16 +107,16 @@ def main():
     np.random.seed(seed)
     torch.manual_seed(seed)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device('cpu' if torch.cuda.is_available() else 'cpu')
 
     pretrained = True
 
     learning_rate = 5e-4
     batch_size = 256
-    per_epoch_updating = 5
-    max_game_history_size = 10_000  # нужно сыграть игр в env.n_agents раз меньше
-    game_epochs = 10
-    training_epochs = 40
+    per_epoch_updating = 1
+    max_game_history_size = 100  # нужно сыграть игр в env.n_agents раз меньше
+    game_epochs = 10_000
+    training_epochs = 50
 
     estimator = QNet().to(device)
 
@@ -135,12 +145,14 @@ def main():
 
     loss_func = nn.MSELoss()
 
-    agent = DerkAgent(env.n_agents, env.action_space, estimator)
+    agent = DerkAgent(env.n_agents, estimator, device=device)
 
     try:
         for i_epoch in range(1, game_epochs + 1):
-            epsilon = max(0.01, 0.08 - 0.01 * (i_epoch / 200))  # Linear annealing from 8% to 1%
+            epsilon = max(0.01, 0.65 - 0.01 * (i_epoch / 200))  # Linear annealing from 8% to 1%  0.08
+
             agent.update_epsilon(epsilon)
+            game_history.reset()
 
             epoch_games_history_collection(env, agent, game_history)
 
@@ -162,3 +174,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+    # asyncio.get_event_loop().run_until_complete(main())

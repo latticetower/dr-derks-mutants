@@ -5,3 +5,4 @@ venv_
 venv
 .idea
 _init_environment.py
+weights/history/

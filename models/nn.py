@@ -1,4 +1,3 @@
-import random
 import json
 
 import torch
@@ -7,7 +6,7 @@ from torch.nn import functional as F
 
 
 class QNet(nn.Module):
-    def __init__(self):
+    def __init__(self, dropout_rate: float = 0.3):
         super().__init__()
 
         self.reward_function = {
@@ -35,17 +34,20 @@ class QNet(nn.Module):
             "timeScaling": 0.8,
         }
 
-        self.fc1 = nn.Linear(4, 128)
-        self.fc2 = nn.Linear(128, 128)
-        self.fc3 = nn.Linear(128, 2)
+        self.dropout_rate = dropout_rate
 
-    # TODO input (state, action) -> [-1, 1]
+        self.fc1 = nn.Linear(69, 128)
+        self.fc2 = nn.Linear(128, 128)
+        self.fc3 = nn.Linear(128, 1)
+
     def forward(self, x):
         x = F.relu(self.fc1(x))
+        x = nn.Dropout(self.dropout_rate)(x)
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
 
-        return F.tanh(x)
+        # return torch.tanh(x)
+        return x
 
     def save_parameters(self, weights_path: str, reward_function_path: str):
         torch.save(self.state_dict(), weights_path)
