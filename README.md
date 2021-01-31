@@ -1,6 +1,6 @@
 # Yet another starter kit for Dr. Derk's Mutant Battlegrounds Challenge
 
-[Derk Gym typical view](assets/example.png)
+![Derk Gym typical view](assets/example.png)
 
 ## Common information
 
