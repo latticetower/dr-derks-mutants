@@ -1,4 +1,8 @@
 """Basic DQN training
+
+Based on this implementation
+https://github.com/seungeunrho/minimalRL/blob/master/dqn.py
+which was adapted to challenge's conditions.
 """
 import argparse
 import asyncio
@@ -36,6 +40,7 @@ SEED = 1337
 learning_rate = 0.0005
 gamma         = 0.98
 buffer_limit  = 50000
+
 
 REWARD_FUNCTION = {
     "damageEnemyStatue": 4,
@@ -78,10 +83,6 @@ def train(q, q_target, memory, optimizer, batch_size=32, n_actions=50,
             np.eye(7)[action[..., 4].astype(np.int)]
         ], axis=-1)
         actions = np.expand_dims(actions, axis=1)
-        if len(actions.shape) != 3:
-            print(action.shape)
-            print(actions.shape)
-            print(done_mask)
         actions = torch.from_numpy(actions).float()
         if use_gpu:
             state = state.cuda()
@@ -99,7 +100,6 @@ def train(q, q_target, memory, optimizer, batch_size=32, n_actions=50,
         target = r + gamma * max_q_prime * done_mask
 
         loss = F.smooth_l1_loss(q_a, target.detach())
-        #print("Loss:", loss.item())
         losses.append(loss.detach().cpu().item())
         loss.backward()
         optimizer.step()
@@ -125,16 +125,12 @@ def record_game(env, q, savedir, n_episode, n_actions=50, use_gpu=False):
             observations = observations.cuda()
             rand_actions = rand_actions.cuda()
         rewards = q.forward(observations, rand_actions)
-        # print("rewards", rewards.shape)
         best_ids = rewards.argmax(dim=1)
         best_rewards = rewards.index_select(1, best_ids)
-        # print("in record_game:", rewards.shape, best_rewards, best_ids.shape, rand_actions.shape)
-        # best_actions = rand_actions.gather(1, best_ids).detach().cpu()
         best_actions = torch.stack([
             row[i].squeeze()
             for row, i in zip(torch.unbind(rand_actions, 0), best_ids.unbind(0))
         ], axis=0).detach().cpu()
-        # print(best_actions.shape)
         assert best_actions.shape[1] == 14 and len(best_actions.shape) == 2
         move_rotate = best_actions.index_select(-1, torch.tensor([0, 1])).numpy()
         chase_focus = (best_actions.index_select(-1, torch.tensor([2]))).numpy()
@@ -165,9 +161,7 @@ def record_game(env, q, savedir, n_episode, n_actions=50, use_gpu=False):
         i += 1
         if done:
             break
-    # to do: save folder contents here + model
-    #filename = save_frames_as_gif(
-    #    image_frames, gamedir, filename=f'animation_{n_episode}.gif')
+    # Here I save the model and description text file (for reproducibility)
     model_path = os.path.join(gamedir, "torch_model.pth")
     torch.save(q.state_dict(), model_path)
     shutil.copy(model_path, WEIGHTS_FILE)
@@ -179,7 +173,6 @@ def record_game(env, q, savedir, n_episode, n_actions=50, use_gpu=False):
 def main(env, n_episodes=10000, start_training_at=2000, print_interval=20,
          batch_size=32, experiment_tags=[], tg=False, savedir="saves",
          n_actions=50, use_gpu=False):
-    # env = gym.make('CartPole-v1')
     q = Qnet()
     q_target = Qnet()
     if use_gpu:
@@ -202,19 +195,17 @@ def main(env, n_episodes=10000, start_training_at=2000, print_interval=20,
             observations = torch.from_numpy(observations).float()
             actions = random_actions(
                 observations.shape[0], k=1, for_env=True).squeeze(1)
-            # observations, epsilon)
-            #print("shape", actions.shape)
-            # print(actions)
+
             next_observations, r, done, info = env.step(actions)
             done = np.all(done)
 
             done_mask = 0.0 if done else 1.0
-            for obs, action, reward, next_obs in zip(observations, actions, r, next_observations):
+            for obs, action, reward, next_obs in zip(
+                    observations, actions, r, next_observations):
                 memory.put((obs, action, reward/100., next_obs, done_mask))
-            #memory.put((observations, actions, r/100., next_observations, done_mask))
+
             observations = next_observations
-            # print(next_observations.shape)
-            #print("R=", r)
+
             if score is None:
                 score = np.asarray([x for x in r])
             else:
@@ -235,14 +226,11 @@ def main(env, n_episodes=10000, start_training_at=2000, print_interval=20,
             q_target.load_state_dict(q.state_dict())
             print("n_episode :{}, score : {}, {}, n_buffer : {}, eps : {}%".format(
                 n_epi, score, print_interval, memory.size(), epsilon))
-            # savedir = "saves"
             image_dir = record_game(env, q, savedir, n_epi, use_gpu=use_gpu)
             save_mp4_files(
                 image_dir, tg=tg, episode=n_epi, score=score,
                 size=memory.size(), tags=experiment_tags)
-            # f.add_text("#hashtag")
             score = None
-    # env.close()
 
 
 if __name__ == '__main__':
@@ -252,10 +240,13 @@ if __name__ == '__main__':
         help="directory where the run results are saved")
     parser.add_argument(
         "-m", default=None,
-        help="additional text description for current run")
+        help="additional text description for current run (not used now)")
     parser.add_argument(
         "--notg", default=False, action="store_true",
-        help="don't write to telegram")
+        help="don't write to telegram (necessary only if you've set up "
+             "a specific telegram bot and channel and want to try locally,"
+             "in any other cases it doesn't matter if you set this flag "
+             "or not)")
     parser.add_argument(
         "--seed", type=int, default=SEED,
         help="random seed to make run deterministic")
@@ -270,7 +261,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--print_interval", type=int, default=20)
     parser.add_argument(
-        "--gpu", action="store_true", default=True,
+        "--gpu", action="store_true", default=False,
         help="Use GPU if available (default device)"
     )
     parser.add_argument(
@@ -288,7 +279,6 @@ if __name__ == '__main__':
         token = None
         channel = None
 
-    mode = "test"
     commit_hash = subprocess.check_output([
         'git', 'rev-parse', '--short', 'HEAD']).decode('ascii').strip('\n')
     experiment_tags = ["dqn_v1", f"commit_{str(commit_hash)}"]

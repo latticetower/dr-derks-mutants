@@ -14,7 +14,7 @@ To test, add some example.png file to the root folder and run:
 
     ./runner.sh python utils/tg_writer.py
 
-The script also can send .gif files.
+The script also can send .gif or .mp4 file.
 """
 import os
 import telegram

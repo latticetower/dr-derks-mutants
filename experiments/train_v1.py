@@ -1,3 +1,8 @@
+"""Basic 'network'.
+
+This code is based on example
+http://docs.gym.derkgame.com/#neural-network-example
+"""
 import gym
 from gym_derk.envs import DerkEnv
 from gym_derk import ObservationKeys

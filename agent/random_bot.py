@@ -43,8 +43,6 @@ class DerkPlayer:
         """
         _obs_n, _rew_n, _done_n, _info_n = env_step_ret
 
-        # null action
-
         # random action
         _random_action = [self.action_space.sample() for i in range(self.n_agents)]
 

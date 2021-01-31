@@ -1,7 +1,7 @@
 {
     "challenge_id": "evaluations-api-drderk",
     "grader_id": "evaluations-api-drderk",
-    "authors": ["lacemaker"],
+    "authors": ["lacemaker", "alex-snd"],
     "description": "test submission",
     "license": "MIT",
     "debug": false,

@@ -13,27 +13,14 @@ class Qnet(nn.Module):
         self.net = self.create_mlp(n_observations + n_actions, [128, 128], 1)
 
     def forward(self, observations, actions):
-        # print(x.shape)
-        # x: (?, 64)
-        # actions: (?, k, 13), 1 for each row
-        # collected = torch.einsum('bk,bij->bjki', observations, actions)  # ?, 13, 64, k
         assert len(observations.shape) == 2
         b, k, d = actions.shape
         observations = observations.unsqueeze(1).expand(b, k, -1)
         collected = torch.cat([observations, actions], dim=-1)
-        #collected = torch.einsum("bi,bkj->bkij", observations, actions)
-        #assert len(collected.shape) == 4
+
         b, k, oa = collected.shape
         collected = collected.reshape(b*k, -1)
         rewards = self.net(collected) # after: (?, 1) - policies
-        # move = torch.tanh(x.index_select(-1, torch.tensor([0])))  # MoveX
-        # rotate = torch.tanh(x.index_select(-1, torch.tensor([1])))  # Rotate
-        # chase_focus = torch.sigmoid(x.index_select(-1, torch.tensor([2]))) # # ChaseFocus
-        # casts = torch.sigmoid(x.index_select(-1, torch.tensor([3, 4, 5])))
-        # focuses = torch.sigmoid(x.index_select(-1, torch.tensor([6, 7, 8, 9, 10, 11, 12])))
-        # print("focuses", focuses.shape)
-        #seq = [move, rotate, chase_focus, casts, focuses]
-        #return torch.cat(seq, dim=-1)
         return rewards.reshape(-1, k) # (?, k)
 
     def sample_actions(self, obs, epsilon, k=1):

@@ -1,3 +1,12 @@
+"""Helper script.
+
+Collects .png files from `datadir`,
+uses matplotlib.animation to create animation from them and saves
+the result to .mp4 file (which). If the telegram bot token and channel
+name are available (and if the bot has the right to post to that channel)
+the helper script also sends this .mp4 with additinal information (episode
+number, score, replay buffer size, run-specific tags).
+"""
 import argparse
 import cv2
 import matplotlib

@@ -51,8 +51,6 @@ class DerkPlayer:
         """
         observation_n, _rew_n, _done_n, _info_n = env_step_ret
 
-        # random action
-        #_random_action = [self.action_space.sample() for i in range(self.n_agents)]
         action_n = [
             self.network.forward(observation_n[i])
             for i in range(self.n_agents)

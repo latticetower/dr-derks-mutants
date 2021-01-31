@@ -17,7 +17,6 @@ def seed_everything(seed):
 
 
 async def make_screenshot(env, path='example.png'):
-    # loop = asyncio.get_running_loop()
     await env.app.page.screenshot({'path': path})
 
 
@@ -42,6 +41,15 @@ def random_actions(batch_size=6, k=1, for_env=False):
 
 
 def save_mp4_files(datadir, tg=False, episode=0, score=[], size=0, tags=[]):
+    """Utility method to run helper script.
+
+    The helper script `utils/gif.py` collects .png files from `datadir`,
+    uses matplotlib.animation to create animation from them and saves
+    the result to .mp4 file (which). If the telegram bot token and channel
+    name are available (and if the bot has the right to post to that channel)
+    the helper script also sends this .mp4 with additinal information (episode
+    number, score, replay buffer size, run-specific tags).
+    """
     command = [
         "./runner.sh",
         "python utils/gif.py",

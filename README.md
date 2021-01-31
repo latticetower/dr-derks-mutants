@@ -6,7 +6,7 @@
 
  - 💪 Challenge Page: https://www.aicrowd.com/challenges/dr-derk-s-mutant-battlegrounds
 
-- This solution is based on [Official starter kit](https://gitlab.aicrowd.com/dr-derk-s-mutant-battlegrounds/starter-kit). In official starter kit you can find submission instructions and other useful information, which I've decided to remove from this readme file.
+- This solution is based on [Official starter kit](https://gitlab.aicrowd.com/dr-derk-s-mutant-battlegrounds/starter-kit). In official starter kit you can find submission instructions and other useful information, which I've decided to remove from this readme file (which was also copied from original starter kit).
 
 - Current solution in repository's `main` branch is based on minimalistic implementation of [DQN algorithm](https://github.com/seungeunrho/minimalRL/blob/master/dqn.py), which was adapted to different environment conditions. Content from `snd_nn` branch was made by other team participant and it is work in progress.
 
@@ -18,10 +18,55 @@ List of required packages is provided in `requirements.txt` file. You can instal
 ```
 pip install -r requirements.txt
 ```
-or, in case of any problems, try to install them one by one via pip. I've checked everything with python 3.7.
+or, in case of any problems, try to install them one by one via `pip`. I've checked everything with python 3.7 on Ubuntu and MacOS, haven't tested on Windows. The package named `python-telegram-bot` is included, but it's optional - I use it during training in `experiments/train_dqn_v1.py` script, and only if Telegram bot's token and channel name are provided in `.ENV` file.
 
 For more information about challenge's gym environment, please refer to the [official documentation](http://docs.gym.derkgame.com/).
 
+# Hidden environment variables and .ENV file
+
+I use helper bash script `./runner.py` to update environment variables.
+To use it, you'll need to add `.ENV` file to repository's root dir (don't add this file to version control - it might provide *secret* information, i.e., in my case Telegram token and channel name, which I've used to show bot fights to other hackathon's participants). To create it, run
+```
+touch .ENV
+```
+from root dir of this repository.
+
+To add lines, open it in your favorite text editor (maybe Atom or nano. Or are you still at Vim?) In my case, I've added this (to ensure that imports of code inside project is visible from my scripts):
+```
+PYTHONPATH=$(pwd):$PYTHONPATH
+```
+and two lines, which were Telegram-specific (you can simply don't add them, script will work without them and without sending your data anywhere).
+```
+TELEGRAM_BOT_TOKEN="<my bot's secret token>"
+TELEGRAM_CHANNEL="<my channel's name>"
+```
+You can add any variables related to services you use to this file.
+
+# My solution - DQN-based
+
+## Training
+
+My training script was run like this:
+```
+./runner.sh python experiments/train_dqn_v1.py
+```
+You can check additional parameters by running it with `--help` flag.
+
+The games played by agents guided by trained network were shown at [my telegram channel](https://t.me/experiment_runner9000), which I've created specifically for the ods.ai community new year 2021 hackathon. Not great, not terrible. At leaderboard it's more like terrible :) For now!
+
+## Bot
+
+Corresponding bot for DQN-based solution can be found at `agent/dqn_bot.py`. 
+You may note several other files in that folder:
+
+- `agent/random_bot.py` contains original bot from starter kit;
+- `agent/simple bot.py` correspond to `experiments/train_v1.py` training script;
+- `agent/bot.py` is still the main bot script, which is run during submission.
+I use it as a placeholder to quickly change between bots and run any of them by changing text in 1 line.
+
+# Run!
+
+`python run.py` still works as it was in starter kit.
 
 # 🚀 Submission Instructions
 

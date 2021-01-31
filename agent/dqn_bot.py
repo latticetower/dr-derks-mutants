@@ -63,27 +63,23 @@ class DerkPlayer:
             observations = observations.cuda()
             rand_actions = rand_actions.cuda()
         rewards = self.network.forward(observations, rand_actions)
-        #print("rewards", rewards.shape)
+
         best_ids = rewards.argmax(dim=1)
         best_rewards = rewards.index_select(1, best_ids)
-        #print("in record_game:", rewards.shape, best_rewards, best_ids.shape, rand_actions.shape)
-        # best_actions = rand_actions.gather(1, best_ids).detach().cpu()
         best_actions = torch.stack([
             row[i].squeeze()
             for row, i in zip(torch.unbind(rand_actions, 0), best_ids.unbind(0))
         ], axis=0).detach().cpu()
-        # print(best_actions.shape)
-        assert len(best_actions.shape)==2 and best_actions.shape[1] == 14
+
+        assert len(best_actions.shape) == 2 and best_actions.shape[1] == 14
         move_rotate = best_actions.index_select(-1, torch.tensor([0, 1])).numpy()
         chase_focus = (best_actions.index_select(-1, torch.tensor([2]))).numpy()
-        #print(move_rotate[: 1, :])
         casts = best_actions.index_select(
             -1, torch.tensor([3, 4, 5, 6])
         ).argmax(-1, keepdim=True).numpy()
         focuses = best_actions.index_select(
             -1, torch.tensor([7, 8, 9, 10, 11, 12, 13])
         ).argmax(-1, keepdim=True).numpy()
-        # print(move_rotate_cf.shape, casts.shape, focuses.shape)
         actions = np.concatenate([
             move_rotate,
             chase_focus,
