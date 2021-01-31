@@ -1,25 +1,26 @@
-# Dr. Derk's Mutant Battlegrounds - Starter Kit
+# Yet another starter kit for Dr. Derk's Mutant Battlegrounds Challenge
 
 ![Dr. Derk's Mutant Battlegrounds](https://i.ibb.co/p2SCH2q/scr.png)
 
+## Common information
 
  - 💪 Challenge Page: https://www.aicrowd.com/challenges/dr-derk-s-mutant-battlegrounds
- - 🗣 Discussion Forum: https://www.aicrowd.com/challengesdr-derk-s-mutant-battlegrounds/discussion
- - 🏆 Leaderboard: https://www.aicrowd.com/challenges/dr-derk-s-mutant-battlegrounds/leaderboards
 
-<p align="center">
-  <a href="https://discord.gg/GTckBMx"><img src="https://img.shields.io/discord/657211973435392011?style=for-the-badge" alt="chat on Discord"></a>
-</p>
+- This solution is based on [Official starter kit](https://gitlab.aicrowd.com/dr-derk-s-mutant-battlegrounds/starter-kit). In official starter kit you can find submission instructions and other useful information, which I've decided to remove from this readme file.
 
-This starter kit contains a random agent to help you easily get started with this challenge! Stay tuned for an RL baseline for you to adapt!
+- Current solution in repository's `main` branch is based on minimalistic implementation of [DQN algorithm](https://github.com/seungeunrho/minimalRL/blob/master/dqn.py), which was adapted to different environment conditions. Content from `snd_nn` branch was made by other team participant and it is work in progress.
 
+- We've decided to publish the code we've made during last week as a team as an open solution, because we've worked on it during ods.ai community's [New Year 2021 Hackathon](https://ods.ai/competitions/pet_projects_2020) (the hackathon's page is in Russian, use google translate if necessary).
 
 # 💻 Installation
-```
-pip3 install -U gym-derk
-```
 
-For more information, please refer to the [official documentation](http://docs.gym.derkgame.com/).
+List of required packages is provided in `requirements.txt` file. You can install them by the following command
+```
+pip install -r requirements.txt
+```
+or, in case of any problems, try to install them one by one via pip. I've checked everything with python 3.7.
+
+For more information about challenge's gym environment, please refer to the [official documentation](http://docs.gym.derkgame.com/).
 
 
 # 🚀 Submission Instructions
