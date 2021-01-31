@@ -1,6 +1,10 @@
 # Yet another starter kit for Dr. Derk's Mutant Battlegrounds Challenge
 
-![Dr. Derk's Mutant Battlegrounds](https://i.ibb.co/p2SCH2q/scr.png)
+<figure class="video_container">
+  <video controls="true" allowfullscreen="true" poster="assets/example.png">
+    <source src="assets/animation.mp4" type="video/mp4">
+  </video>
+</figure>
 
 ## Common information
 
