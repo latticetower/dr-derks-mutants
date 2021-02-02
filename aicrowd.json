@@ -4,6 +4,6 @@
     "authors": ["lacemaker", "alex-snd"],
     "description": "test submission",
     "license": "MIT",
-    "debug": true,
+    "debug": false,
     "gpu": true
 }
