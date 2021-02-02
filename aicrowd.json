@@ -5,5 +5,5 @@
     "description": "test submission",
     "license": "MIT",
     "debug": false,
-    "gpu": true
+    "gpu": false
 }

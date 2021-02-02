@@ -21,8 +21,8 @@ class DerkPlayer:
         self.n_agents = n_agents
         self.action_space = action_space
         self.network = Qnet()
-        self.use_gpu = torch.cuda.is_available()
-        self.network.load_state_dict(torch.load(WEIGHTS_FILE))
+        self.use_gpu = False  # torch.cuda.is_available()
+        self.network.load_state_dict(torch.load(WEIGHTS_FILE, map_location=torch.device('cpu')))
         if self.use_gpu:
             self.network.cuda()
         self.network.eval()
