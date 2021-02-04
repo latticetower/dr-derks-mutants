@@ -2,4 +2,4 @@ gym-derk==0.16.4
 numpy
 python-telegram-bot
 torch
-cv2
+opencv-python
